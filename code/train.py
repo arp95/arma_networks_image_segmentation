@@ -1,3 +1,4 @@
+# main file: runs the training-eval loop for Deeplabv3 on Cityscapes dataset
 # header files
 import os
 import numpy as np
@@ -20,7 +21,60 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-# set-up metrics
+# hyper-parameters
+sgd_optim = True
+batch_size_train = 8
+batch_size_val = 4
+lr = 1e-4
+num_epochs = 1000
+
+# ensure the experiment produces same result on each run
+np.random.seed(1234)
+torch.manual_seed(1234)
+torch.cuda.manual_seed(1234)
+random.seed(1234)
+
+# transforms
+train_image_transform = torchvision.transforms.Compose([
+  torchvision.transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5),
+  torchvision.transforms.RandomHorizontalFlip(),
+  torchvision.transforms.ToTensor(),
+  torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
+
+train_target_transform = torchvision.transforms.Compose([
+  torchvision.transforms.RandomHorizontalFlip(),
+])
+
+val_image_transform = torchvision.transforms.Compose([
+  torchvision.transforms.ToTensor(),
+  torchvision.transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
+
+# get cityscapes dataset from google drive link
+train_dataset = Cityscapes(root="/content/drive/My Drive/cityscapes/", split='train', transform=train_image_transform, target_transform=train_target_transform)
+val_dataset = Cityscapes(root="/content/drive/My Drive/cityscapes/", split='val', transform=val_image_transform)
+
+# get train and val loaders for the corresponding datasets
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, num_workers=16)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, num_workers=16)
+
+# model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = torchvision.models.segmentation.deeplabv3_resnet101(pretrained=True)
+model.classifier = torchvision.models.segmentation.deeplabv3.DeepLabHead(2048, 19)
+model.to(device)
+
+# optimizer
+if sgd_optim:
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
+else:
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+# define loss
+criterion = torch.nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
+
+# train-eval loop
 metrics = StreamSegMetrics(19)
 train_loss_list = []
 train_accuracy_list = []
@@ -28,11 +82,12 @@ train_iou_list = []
 val_loss_list = []
 val_accuracy_list = []
 val_iou_list = []
+best_metric = -1
+best_metric_epoch = -1
 
-# training and val loop
-for epoch in range(0, 1000):
+for epoch in range(0, num_epochs):
 
-  # train
+  # train part
   metrics.reset()
   model.train()
   train_loss = 0.0
@@ -45,7 +100,7 @@ for epoch in range(0, 1000):
     
     # get loss
     optimizer.zero_grad()
-    outputs = model(images)
+    outputs = model(images)['out']
 
     loss = criterion(outputs, labels)
     loss.backward()
@@ -67,7 +122,7 @@ for epoch in range(0, 1000):
   train_iou_list.append(train_iou)
 
   
-  # evaluation code
+  # eval part
   metrics.reset()
   model.eval()
   val_loss = 0.0
@@ -80,7 +135,7 @@ for epoch in range(0, 1000):
       labels = labels.squeeze(1)
 
       # get loss
-      outputs = model(images)
+      outputs = model(images)['out']
       loss = criterion(outputs, labels)
       val_loss += loss.item()
 
@@ -98,6 +153,11 @@ for epoch in range(0, 1000):
   val_accuracy_list.append(val_accuracy)
   val_iou_list.append(val_iou)
 
+  # store best model(early stopping)
+  if(float(val_accuracy)>best_metric and epoch>=50):
+    best_metric = float(val_accuracy)
+    best_metric_epoch = epoch
+    torch.save(model.state_dict(), "/content/drive/My Drive/deeplabv3_cityscapes.pth")
 
   print()
   print("Epoch: " + str(epoch))
@@ -105,4 +165,3 @@ for epoch in range(0, 1000):
   print("Training Accuracy: " + str(train_accuracy) + "    Validation Accuracy: " + str(val_accuracy))
   print("Training mIoU: " + str(train_iou) + "    Validhation mIoU: " + str(val_iou))
   print()
-
