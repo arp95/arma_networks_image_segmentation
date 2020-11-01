@@ -4,7 +4,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from .utils import _SimpleSegmentationModel
-from arma import *
+from .arma import *
 
 
 __all__ = ["DeepLabV3"]
