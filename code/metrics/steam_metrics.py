@@ -1,7 +1,7 @@
 # reference: https://github.com/VainF/DeepLabV3Plus-Pytorch/blob/master/metrics/stream_metrics.py
 # header files
 import numpy as np
-#from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix
 
 
 class _StreamMetrics(object):
