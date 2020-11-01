@@ -1,4 +1,4 @@
-# main file: runs the training-eval loop for Deeplabv3 on Cityscapes dataset
+# main file: runs the training-eval loop for Deeplabv3/Deeplabv3+ on Cityscapes dataset
 # header files
 import os
 import numpy as np
@@ -15,18 +15,24 @@ from sklearn.metrics import confusion_matrix
 
 from dataset import Cityscapes
 from metrics import StreamSegMetrics
+import network 
+import utils
 
 from PIL import Image
 import matplotlib
 import matplotlib.pyplot as plt
 
 
-# hyper-parameters
-sgd_optim = True
-batch_size_train = 8
-batch_size_val = 4
-lr = 1e-4
-num_epochs = 1000
+# user-defined values
+lr = 0.01
+model_type = "deeplabv3_resnet50"
+use_arma_layer = False
+dataset_path = "/content/drive/My Drive/cityscapes/"
+model_save_path = "/content/drive/My Drive/best_model_deeplabv3_resnet50.pth"
+bs_train = 8
+bs_val = 4
+wd = 1e-4
+num_epochs = 30000
 
 # ensure the experiment produces same result on each run
 np.random.seed(1234)
@@ -52,24 +58,33 @@ val_image_transform = torchvision.transforms.Compose([
 ])
 
 # get cityscapes dataset from google drive link
-train_dataset = Cityscapes(root="/content/drive/My Drive/cityscapes/", split='train', transform=train_image_transform, target_transform=train_target_transform)
-val_dataset = Cityscapes(root="/content/drive/My Drive/cityscapes/", split='val', transform=val_image_transform)
+train_dataset = Cityscapes(root=dataset_path, split='train', transform=train_image_transform, target_transform=train_target_transform)
+val_dataset = Cityscapes(root=dataset_path, split='val', transform=val_image_transform)
 
 # get train and val loaders for the corresponding datasets
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, num_workers=16)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, num_workers=16)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=bs_train, shuffle=True, num_workers=16)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=bs_val, shuffle=True, num_workers=16)
 
 # model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = torchvision.models.segmentation.deeplabv3_resnet101(pretrained=True)
-model.classifier = torchvision.models.segmentation.deeplabv3.DeepLabHead(2048, 19)
+model_map = {
+    'deeplabv3_resnet50': network.deeplabv3_resnet50,
+    'deeplabv3plus_resnet50': network.deeplabv3plus_resnet50,
+    'deeplabv3_resnet101': network.deeplabv3_resnet101,
+    'deeplabv3plus_resnet101': network.deeplabv3plus_resnet101
+}
+
+model = model_map[model_type](arma=use_arma_layer)
+for m in model.backbone.modules():
+    if isinstance(m, nn.BatchNorm2d):
+        m.momentum = 0.01
 model.to(device)
+print(model)
+
 
 # optimizer
-if sgd_optim:
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
-else:
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, momentum=0.9, weight_decay=wd)
+scheduler = utils.PolyLR(optimizer, num_epochs, power=0.9)
 
 # define loss
 criterion = torch.nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
@@ -77,10 +92,8 @@ criterion = torch.nn.CrossEntropyLoss(ignore_index=255, reduction='mean')
 # train-eval loop
 metrics = StreamSegMetrics(19)
 train_loss_list = []
-train_accuracy_list = []
 train_iou_list = []
 val_loss_list = []
-val_accuracy_list = []
 val_iou_list = []
 best_metric = -1
 best_metric_epoch = -1
@@ -116,52 +129,51 @@ for epoch in range(0, num_epochs):
   train_loss = train_loss/float(len(train_loader))
   train_loss_list.append(train_loss)
   results = metrics.get_results()
-  train_accuracy = results["Overall Acc"]
   train_iou = results["Mean IoU"]
-  train_accuracy_list.append(train_accuracy)
   train_iou_list.append(train_iou)
 
   
-  # eval part
-  metrics.reset()
-  model.eval()
-  val_loss = 0.0
-  for step, (images, labels) in enumerate(val_loader):
-    with torch.no_grad():
+  # eval part after every 100  epochs
+  if epoch%100 == 0:
+      metrics.reset()
+      model.eval()
+      val_loss = 0.0
+      for step, (images, labels) in enumerate(val_loader):
+          with torch.no_grad():
 
-      # if cuda
-      images = images.to(device, dtype=torch.float32)
-      labels = labels.to(device, dtype=torch.long)
-      labels = labels.squeeze(1)
+              # if cuda
+              images = images.to(device, dtype=torch.float32)
+              labels = labels.to(device, dtype=torch.long)
+              labels = labels.squeeze(1)
 
-      # get loss
-      outputs = model(images)['out']
-      loss = criterion(outputs, labels)
-      val_loss += loss.item()
+              # get loss
+              outputs = model(images)['out']
+              loss = criterion(outputs, labels)
+              val_loss += loss.item()
 
-      # metrics
-      preds = outputs.detach().max(dim=1)[1].cpu().numpy()
-      targets = labels.cpu().numpy()
-      metrics.update(targets, preds)
+              # metrics
+              preds = outputs.detach().max(dim=1)[1].cpu().numpy()
+              targets = labels.cpu().numpy()
+              metrics.update(targets, preds)
 
-  # update val_loss, val_accuracy and val_iou 
-  val_loss = val_loss / float(len(val_loader))
-  val_loss_list.append(val_loss)
-  results = metrics.get_results()
-  val_accuracy = results["Overall Acc"]
-  val_iou = results["Mean IoU"] 
-  val_accuracy_list.append(val_accuracy)
-  val_iou_list.append(val_iou)
+      # update val_loss, val_accuracy and val_iou 
+      val_loss = val_loss / float(len(val_loader))
+      val_loss_list.append(val_loss)
+      results = metrics.get_results()
+      val_iou = results["Mean IoU"]
+      val_iou_list.append(val_iou)
 
-  # store best model(early stopping)
-  if(float(val_accuracy)>best_metric and epoch>=50):
-    best_metric = float(val_accuracy)
-    best_metric_epoch = epoch
-    torch.save(model.state_dict(), "/content/drive/My Drive/deeplabv3_cityscapes.pth")
+      # store best model(early stopping)
+      if(float(val_iou)>best_metric and epoch>=100):
+          best_metric = float(val_iou)
+          best_metric_epoch = epoch
+          torch.save(model.state_dict(), model_save_path)
 
-  print()
-  print("Epoch: " + str(epoch))
-  print("Training Loss: " + str(train_loss) + "    Validation Loss: " + str(val_loss))
-  print("Training Accuracy: " + str(train_accuracy) + "    Validation Accuracy: " + str(val_accuracy))
-  print("Training mIoU: " + str(train_iou) + "    Validhation mIoU: " + str(val_iou))
-  print()
+  
+      print()
+      print("Epoch: " + str(epoch))
+      print("Training Loss: " + str(train_loss) + "    Validation Loss: " + str(val_loss))
+      print("Training mIoU: " + str(train_iou) + "    Validation mIoU: " + str(val_iou))
+      print("Best Validation mIoU: " + str(best_metric))
+      print()
+  scheduler.step()
