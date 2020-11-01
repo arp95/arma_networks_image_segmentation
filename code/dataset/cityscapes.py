@@ -125,7 +125,7 @@ class Cityscapes(torch.utils.data.Dataset):
 
         # random crop, if split='train'
         if self.split == "train":
-            i, j, h, w = torchvision.transforms.RandomCrop.get_params(image, output_size=(512, 512))
+            i, j, h, w = torchvision.transforms.RandomCrop.get_params(image, output_size=(513, 513))
             image = torchvision.transforms.functional.crop(image, i, j, h, w)
             target = torchvision.transforms.functional.crop(target, i, j, h, w)
 
