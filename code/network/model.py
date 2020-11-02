@@ -39,6 +39,15 @@ def _load_model(arch_type, backbone, num_classes, output_stride, arma):
 
 
 # Deeplab v3
+def deeplabv3_resnet18(num_classes=19, output_stride=8, arma=False):
+    """Constructs a DeepLabV3 model with a ResNet-50 backbone.
+    Args:
+        num_classes (int): number of classes.
+        output_stride (int): output stride for deeplab.
+        arma: boolean value
+    """
+    return _load_model('deeplabv3', 'resnet18', num_classes, output_stride=output_stride, arma=arma)
+
 def deeplabv3_resnet50(num_classes=19, output_stride=8, arma=False):
     """Constructs a DeepLabV3 model with a ResNet-50 backbone.
     Args:
@@ -59,6 +68,15 @@ def deeplabv3_resnet101(num_classes=19, output_stride=8, arma=False):
 
 
 # Deeplab v3+
+def deeplabv3plus_resnet18(num_classes=19, output_stride=8, arma=False):
+    """Constructs a DeepLabV3 model with a ResNet-50 backbone.
+    Args:
+        num_classes (int): number of classes.
+        output_stride (int): output stride for deeplab.
+        arma: boolean value
+    """
+    return _load_model('deeplabv3plus', 'resnet18', num_classes, output_stride=output_stride, arma=arma)
+
 def deeplabv3plus_resnet50(num_classes=19, output_stride=8, arma=False):
     """Constructs a DeepLabV3 model with a ResNet-50 backbone.
     Args:
