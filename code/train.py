@@ -12,6 +12,7 @@ from PIL import Image
 from collections import namedtuple
 import json
 from sklearn.metrics import confusion_matrix
+import argparse
 
 from dataset import Cityscapes
 from metrics import StreamSegMetrics
@@ -24,15 +25,27 @@ import matplotlib.pyplot as plt
 
 
 # user-defined values
-lr = 0.01
-model_type = "deeplabv3_resnet50"
-use_arma_layer = False
-dataset_path = "/content/drive/My Drive/cityscapes/"
-model_save_path = "/content/drive/My Drive/best_model_deeplabv3_resnet50.pth"
-bs_train = 8
-bs_val = 4
-wd = 1e-4
-num_epochs = 30000
+parser = argparse.ArgumentParser()
+parser.add_argument("--datapath", type=str, default='./datasets/data', help="path to Dataset")
+parser.add_argument("--save_model", type=str, default='./best_model_deeplabv3_resnet50.pth', help="path to save model")
+parser.add_argument("--use_arma", type=bool, default=True, help="use arma layer or not")
+parser.add_argument("--lr", type=float, default=0.01, help="lr")
+parser.add_argument("--model_type", type=str, default="deeplabv3_resnet50", help="model")
+parser.add_argument("--bs_train", type=int, default=8, help="bs for train")
+parser.add_argument("--bs_val", type=int, default=4, help="bs for val")
+parser.add_argument("--wd", type=float, default=1e-4, help="wd")
+parser.add_argument("--epochs", type=int, default=30000, help="epochs")
+opts = parser.parse_args()
+
+lr = opts.lr
+model_type = opts.model_type
+use_arma_layer = opts.use_arma
+dataset_path = opts.datapath
+model_save_path = opts.save_model
+bs_train = opts.bs_train
+bs_val = opts.bs_val
+wd = opts.wd
+num_epochs = opts.epochs
 
 # ensure the experiment produces same result on each run
 np.random.seed(1234)
@@ -68,9 +81,11 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=bs_val, shuffle
 # model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_map = {
+    'deeplabv3_resnet18': network.deeplabv3_resnet18,
     'deeplabv3_resnet50': network.deeplabv3_resnet50,
-    'deeplabv3plus_resnet50': network.deeplabv3plus_resnet50,
     'deeplabv3_resnet101': network.deeplabv3_resnet101,
+    'deeplabv3plus_resnet18': network.deeplabv3plus_resnet18,
+    'deeplabv3plus_resnet50': network.deeplabv3plus_resnet50,
     'deeplabv3plus_resnet101': network.deeplabv3plus_resnet101
 }
 
@@ -79,7 +94,6 @@ for m in model.backbone.modules():
     if isinstance(m, nn.BatchNorm2d):
         m.momentum = 0.01
 model.to(device)
-print(model)
 
 
 # optimizer
@@ -113,7 +127,7 @@ for epoch in range(0, num_epochs):
     
     # get loss
     optimizer.zero_grad()
-    outputs = model(images)['out']
+    outputs = model(images)
 
     loss = criterion(outputs, labels)
     loss.backward()
@@ -147,7 +161,7 @@ for epoch in range(0, num_epochs):
               labels = labels.squeeze(1)
 
               # get loss
-              outputs = model(images)['out']
+              outputs = model(images)
               loss = criterion(outputs, labels)
               val_loss += loss.item()
 
