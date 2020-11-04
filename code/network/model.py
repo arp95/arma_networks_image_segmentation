@@ -2,6 +2,7 @@
 # header files
 from .utils import IntermediateLayerGetter
 from ._deeplab import DeepLabHead, DeepLabHeadV3Plus, DeepLabV3
+from .fcn import FCNHead, FCN
 from .backbone import resnet
 
 
@@ -28,11 +29,35 @@ def _segm_resnet(name, backbone_name, num_classes, output_stride, arma):
     model = DeepLabV3(backbone, classifier)
     return model
 
+def _segm_resnet_fcn(backbone_name, num_classes, output_stride, arma):
+    replace_stride_with_dilation=[False, False, False]
+    if output_stride==8:
+        replace_stride_with_dilation=[False, True, True]
+    elif output_stride==16:
+        replace_stride_with_dilation=[False, False, True]
+
+    backbone = resnet.__dict__[backbone_name](replace_stride_with_dilation=replace_stride_with_dilation, arma=arma)
+    return_layers = {'layer4': 'out'}
+    backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
+    classifier = FCNHead(512, num_classes, arma=arma)
+
+    model = FCN(backbone, classifier)
+    return model
+
 def _load_model(arch_type, backbone, num_classes, output_stride, arma):
     if backbone=='mobilenetv2':
         model = _segm_mobilenet(arch_type, backbone, num_classes, output_stride=output_stride, arma=arma)
     elif backbone.startswith('resnet'):
         model = _segm_resnet(arch_type, backbone, num_classes, output_stride=output_stride, arma=arma)
+    else:
+        raise NotImplementedError
+    return model
+
+def _load_model_fcn(backbone, output_stride, num_classes, arma):
+    if backbone=='mobilenetv2':
+        model = _segm_mobilenet(arch_type, backbone, num_classes, output_stride=output_stride, arma=arma)
+    elif backbone.startswith('resnet'):
+        model = _segm_resnet_fcn(backbone_name=backbone, num_classes=num_classes, output_stride=output_stride, arma=arma)
     else:
         raise NotImplementedError
     return model
@@ -94,3 +119,21 @@ def deeplabv3plus_resnet101(num_classes=19, output_stride=8, arma=False):
         arma: boolean value
     """
     return _load_model('deeplabv3plus', 'resnet101', num_classes, output_stride=output_stride, arma=arma)
+
+
+# FCN
+def fcn_resnet18(num_classes=19, output_stride=32, arma=False):
+    """Constructs a FCN model with a ResNet-18 backbone.
+    Args:
+        num_classes (int): number of classes.
+        arma: boolean value
+    """
+    return _load_model_fcn('resnet18', output_stride=output_stride, num_classes=num_classes, arma=arma)
+
+def fcn_resnet50(num_classes=19, output_stride=32, arma=False):
+    """Constructs a FCN model with a ResNet-18 backbone.
+    Args:
+        num_classes (int): number of classes.
+        arma: boolean value
+    """
+    return _load_model_fcn('resnet50', output_stride=output_stride, num_classes=num_classes, arma=arma)

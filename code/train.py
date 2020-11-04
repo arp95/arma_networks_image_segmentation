@@ -34,7 +34,7 @@ parser.add_argument("--datapath", type=str, default='./datasets/data', help="pat
 parser.add_argument("--save_folder", type=str, default='test/', help="path to save model")
 parser.add_argument("--use_arma", type=bool, default=True, help="use arma layer or not")
 parser.add_argument("--lr", type=float, default=0.01, help="lr")
-parser.add_argument("--model_type", type=str, default="deeplabv3_resnet50", help="model")
+parser.add_argument("--model_type", type=str, default="fcn_resnet18", help="model")
 parser.add_argument("--bs_train", type=int, default=6, help="bs for train")
 parser.add_argument("--bs_val", type=int, default=4, help="bs for val")
 parser.add_argument("--wd", type=float, default=1e-4, help="wd")
@@ -101,6 +101,8 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=bs_val, \
 # model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_map = {
+    'fcn_resnet18': network.fcn_resnet18,
+    'fcn_resnet50': network.fcn_resnet50,
     'deeplabv3_resnet18': network.deeplabv3_resnet18,
     'deeplabv3_resnet50': network.deeplabv3_resnet50,
     'deeplabv3_resnet101': network.deeplabv3_resnet101,
