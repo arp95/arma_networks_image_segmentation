@@ -1,11 +1,29 @@
 # header files
 import torch
 import torch.nn as nn
+import torch.utils.model_zoo as model_zoo
 from .arma import *
 
 
 # required functions
 __all__ = ['resnet34', 'resnet50', 'resnet101']
+
+model_with_arma_files = {
+    'resnet18': '.pth',
+    'resnet34': '.pth',
+    'resnet50': '.pth',
+    'resnet101': '.pth',
+    'resnet152': '.pth',
+}
+
+model_without_arma_files = {
+    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
+    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
+    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
+    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
+    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+}
+
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1, arma=False):
     """
@@ -183,46 +201,55 @@ class ResNet(nn.Module):
         return x
 
 
-def _resnet(arch, block, layers, arma=False, **kwargs):
+def _resnet(arch, block, layers, arma=False, pretrained_with_arma=False, **kwargs):
+    # load resnet
     model = ResNet(block, layers, arma=arma, **kwargs)
+
+    # if pretrained with arma
+    if pretrained_with_arma and arma:
+        model.load_state_dict(model_with_arma_files[arch])
+
+    # if pretrained without arma
+    if arma == False:
+        model.load_state_dict(model_zoo.load_url(model_without_arma_files[arch]))
     return model
 
 
-def resnet18(arma=False, **kwargs):
+def resnet18(arma=False, pretrained_with_arma=False, **kwargs):
     r"""ResNet-34 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], arma=arma, **kwargs)
+    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], arma=arma, pretrained_with_arma=pretrained_with_arma, **kwargs)
 
 
-def resnet34(arma=False, **kwargs):
+def resnet34(arma=False, pretrained_with_arma=False, **kwargs):
     r"""ResNet-34 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], arma=arma, **kwargs)
+    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], arma=arma, pretrained_with_arma=pretrained_with_arma, **kwargs)
 
 
-def resnet50(arma=False, **kwargs):
+def resnet50(arma=False, pretrained_with_arma=False, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], arma=arma, **kwargs)
+    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], arma=arma, pretrained_with_arma=pretrained_with_arma, **kwargs)
 
 
-def resnet101(arma=False, **kwargs):
+def resnet101(arma=False, pretrained_with_arma=False, **kwargs):
     r"""ResNet-101 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet('resnet101', Bottleneck, [3, 4, 23, 3], arma=arma, **kwargs)
+    return _resnet('resnet101', Bottleneck, [3, 4, 23, 3], arma=arma, pretrained_with_arma=pretrained_with_arma, **kwargs)

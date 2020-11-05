@@ -33,6 +33,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--datapath", type=str, default='./datasets/data', help="path to Dataset")
 parser.add_argument("--save_folder", type=str, default='test/', help="path to save model")
 parser.add_argument("--use_arma", type=bool, default=True, help="use arma layer or not")
+parser.add_argument("--pretrained_arma_backbone", type=bool, default=False, help="resnet with arma pretrained or not")
 parser.add_argument("--lr", type=float, default=0.01, help="lr")
 parser.add_argument("--model_type", type=str, default="fcn_resnet18", help="model")
 parser.add_argument("--bs_train", type=int, default=6, help="bs for train")
@@ -45,7 +46,12 @@ opts = parser.parse_args()
 lr = opts.lr
 model_type = opts.model_type
 use_arma_layer = opts.use_arma
+use_pretrained_arma_backbone = opts.pretrained_arma_backbone
 dataset_path = opts.datapath
+bs_train = opts.bs_train
+bs_val = opts.bs_val
+wd = opts.wd
+num_epochs = opts.epochs
 
 model_save_folder = opts.save_folder + '/checkpoints/'
 logs = opts.save_folder + '/logs/'
@@ -53,14 +59,6 @@ logs = opts.save_folder + '/logs/'
 helper.make_dir(opts.save_folder)
 helper.make_dir(logs)
 helper.make_dir(model_save_folder)
-
-bs_train = opts.bs_train
-bs_val = opts.bs_val
-wd = opts.wd
-num_epochs = opts.epochs
-
-
-
 writer = SummaryWriter(logs, flush_secs=10)
 
 # ensure the experiment produces same result on each run
@@ -87,16 +85,12 @@ val_image_transform = torchvision.transforms.Compose([
 ])
 
 # get cityscapes dataset from google drive link
-train_dataset = Cityscapes(root=dataset_path, split='train', transform=train_image_transform,\
- target_transform=train_target_transform)
-
+train_dataset = Cityscapes(root=dataset_path, split='train', transform=train_image_transform, target_transform=train_target_transform)
 val_dataset = Cityscapes(root=dataset_path, split='val', transform=val_image_transform)
 
 # get train and val loaders for the corresponding datasets
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=bs_train, shuffle=True, \
-  num_workers=16)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=bs_val, \
-  shuffle=False, num_workers=16)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=bs_train, shuffle=True, num_workers=16)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=bs_val, shuffle=False, num_workers=16)
 
 # model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -111,7 +105,7 @@ model_map = {
     'deeplabv3plus_resnet101': network.deeplabv3plus_resnet101
 }
 
-model = model_map[model_type](arma=use_arma_layer)
+model = model_map[model_type](arma=use_arma_layer, pretrained_with_arma_backbone=use_pretrained_arma_backbone)
 for m in model.backbone.modules():
     if isinstance(m, nn.BatchNorm2d):
         m.momentum = 0.01
@@ -246,5 +240,4 @@ for epoch in range(start_epoch, num_epochs):
     print("Training mIoU: " + str(train_iou) + "    Validation mIoU: " + str(val_iou))
     print("Best Validation mIoU: " + str(best_metric))
     print()
-
   scheduler.step()
