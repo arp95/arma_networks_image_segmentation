@@ -70,12 +70,13 @@ class Cityscapes(torch.utils.data.Dataset):
     id_to_train_id = np.array([c.train_id for c in classes])
 
     # init method
-    def __init__(self, root, split='train', transform=None, target_transform=None,img_size=768):
+    def __init__(self, root, split='train', transform=None, target_transform=None, img_size=768):
         """
         Args:
             root (string): path of the directory which contains the required images and masks
             split (string): can have value either 'train' or 'val'
             transform (torchvision.transforms): transforms applied on the given image
+            img_size: random crop to be taken during training
         """
         self.root = os.path.expanduser(root)
         self.mode = 'gtFine'
@@ -87,7 +88,6 @@ class Cityscapes(torch.utils.data.Dataset):
         self.split = split
         self.images = []
         self.targets = []
-
         self.img_size = img_size
 
         if split not in ['train', 'test', 'val']:
@@ -127,8 +127,7 @@ class Cityscapes(torch.utils.data.Dataset):
 
         # random crop, if split='train'
         if self.split == "train":
-            i, j, h, w = torchvision.transforms.RandomCrop.get_params(image, \
-                output_size=(self.img_size,self.img_size))
+            i, j, h, w = torchvision.transforms.RandomCrop.get_params(image, output_size=(self.img_size, self.img_size))
             image = torchvision.transforms.functional.crop(image, i, j, h, w)
             target = torchvision.transforms.functional.crop(target, i, j, h, w)
 
