@@ -91,9 +91,6 @@ model_map = {
 }
 
 model = model_map[model_type](arma=use_arma_layer)
-for m in model.backbone.modules():
-    if isinstance(m, nn.BatchNorm2d):
-        m.momentum = 0.01
 model = nn.DataParallel(model)
 model.to(device)
 
@@ -155,8 +152,8 @@ for epoch in range(start_epoch, num_epochs):
 
     end = time.time()
     if step%10==0:
-      print('Epoch: ',str(epoch),' Iter: ',step,'Loss: ',loss.item(),)
-    print('iter time: ',end-start)  
+      print('Epoch: ', str(epoch), ' Iter: ', step, 'Loss: ', loss.item(),)
+    print('iter time: ', end-start)  
 
   # update training_loss, training_accuracy and training_iou 
   training_loss = training_loss / float(len(train_loader))

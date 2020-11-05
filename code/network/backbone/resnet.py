@@ -6,7 +6,7 @@ from .arma import *
 
 
 # required functions
-__all__ = ['resnet34', 'resnet50', 'resnet101']
+__all__ = ['resnet18', 'resnet34', 'resnet50', 'resnet101']
 
 model_with_arma_files = {
     'resnet18': '.pth',
