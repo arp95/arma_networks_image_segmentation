@@ -62,6 +62,19 @@ def _load_model_fcn(backbone, output_stride, num_classes, arma, pretrained_with_
         raise NotImplementedError
     return model
 
+def _load_resnet(arch_type, num_classes, arma):
+    backbone = resnet.__dict__[arch_type](replace_stride_with_dilation=[False, False, False], arma=arma, num_classes=num_classes)
+    return backbone
+
+def _load_model_fcn(backbone, output_stride, num_classes, arma, pretrained_with_arma_backbone):
+    if backbone=='mobilenetv2':
+        model = _segm_mobilenet(arch_type, backbone, num_classes, output_stride=output_stride, arma=arma, pretrained_backbone=pretrained_backbone)
+    elif backbone.startswith('resnet'):
+        model = _segm_resnet_fcn(backbone_name=backbone, num_classes=num_classes, output_stride=output_stride, arma=arma, pretrained_with_arma_backbone=pretrained_with_arma_backbone)
+    else:
+        raise NotImplementedError
+    return model
+
 
 # Deeplab v3
 def deeplabv3_resnet18(num_classes=19, output_stride=8, arma=False, pretrained_with_arma_backbone=False):
@@ -126,14 +139,44 @@ def fcn_resnet18(num_classes=19, output_stride=32, arma=False, pretrained_with_a
     """Constructs a FCN model with a ResNet-18 backbone.
     Args:
         num_classes (int): number of classes.
+        output_stride: the ratio of the size of input image to size of image at the end of the encoder
         arma: boolean value
+        pretrained_with_arma_backbone: boolean indicating whether to use pretrained backbone or not
     """
     return _load_model_fcn('resnet18', output_stride=output_stride, num_classes=num_classes, arma=arma, pretrained_with_arma_backbone=pretrained_with_arma_backbone)
 
 def fcn_resnet50(num_classes=19, output_stride=32, arma=False, pretrained_with_arma_backbone=False):
+    """Constructs a FCN model with a ResNet-50 backbone.
+    Args:
+        num_classes (int): number of classes.
+        output_stride: the ratio of the size of input image to size of image at the end of the encoder
+        arma: boolean value
+        pretrained_with_arma_backbone: boolean indicating whether to use pretrained backbone or not
+    """
+    return _load_model_fcn('resnet50', output_stride=output_stride, num_classes=num_classes, arma=arma, pretrained_with_arma_backbone=pretrained_with_arma_backbone)
+
+
+# Backbones
+def resnet18(num_classes=1000, arma=False):
     """Constructs a FCN model with a ResNet-18 backbone.
     Args:
         num_classes (int): number of classes.
         arma: boolean value
     """
-    return _load_model_fcn('resnet50', output_stride=output_stride, num_classes=num_classes, arma=arma, pretrained_with_arma_backbone=pretrained_with_arma_backbone)
+    return _load_resnet('resnet18', num_classes=num_classes, arma=arma)
+
+def resnet50(num_classes=1000, arma=False):
+    """Constructs a FCN model with a ResNet-50 backbone.
+    Args:
+        num_classes (int): number of classes.
+        arma: boolean value
+    """
+    return _load_resnet('resnet50', num_classes=num_classes, arma=arma)
+
+def resnet101(num_classes=1000, arma=False):
+    """Constructs a FCN model with a ResNet-101 backbone.
+    Args:
+        num_classes (int): number of classes.
+        arma: boolean value
+    """
+    return _load_resnet('resnet101', num_classes=num_classes, arma=arma)
