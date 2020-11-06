@@ -186,8 +186,8 @@ for epoch in range(start_epoch, num_epochs):
   train_iou_list.append(train_iou)
 
   
-  writer.add_scalar("loss/train", train_loss,epoch)
-  writer.add_scalar("iou/train", train_iou,epoch)
+  writer.add_scalar("loss/train", train_loss, epoch)
+  writer.add_scalar("iou/train", train_iou, epoch)
 
 
   if epoch%5==0:
@@ -219,8 +219,8 @@ for epoch in range(start_epoch, num_epochs):
     val_iou = results["Mean IoU"]
     val_iou_list.append(val_iou)
 
-    writer.add_scalar("loss/val", val_loss,epoch)
-    writer.add_scalar("iou/val_iou", val_iou,epoch)
+    writer.add_scalar("loss/val", val_loss, epoch)
+    writer.add_scalar("iou/val_iou", val_iou, epoch)
 
     state = {'state_dict': model.state_dict(),'epoch': epoch,\
     'optimizer':optimizer.state_dict(),'opts':opts}

@@ -4,12 +4,12 @@
 ---
 
 
-### Author
-Arpit Aggarwal Shantam Bajpai
+### Authors
+Arpit Aggarwal Shishira Maiya Shantam Bajpai
 
 
 ### Introduction to the Project 
-In this project, different CNN Architectures like ARMA Deeplab-v3, Deeplab-v3, SegNet were used for the task of image segmentation. The input to the CNN networks was a (224x224x3) image and the number of classes were equal to 19. The CNN architectures were implemented in PyTorch and the loss function was Cross Entropy(CE) Loss. The hyperparameters to be tuned were: Number of epochs(e), Learning Rate(lr), weight decay(wd) and batch size(bs).
+ARMA stands for Auto-regressive Moving Average, a concept that was recently introduced by a research group at UMD. The aim of adding interconnections between output neurons is to increase the net receptive field which inturn helps in learning more information in the image. This is very useful for image segmentation and object detection tasks. In this project, different CNN Architectures like ARMA Deeplab-v3, Deeplab-v3, ARMA Deeplab-v3+ and Deeplab-v3+ were used for the task of image segmentation on Cityscapes dataset. The input to the CNN networks was a (768x768x3) image and the number of classes were equal to 19. The CNN architectures were implemented in PyTorch and the loss function was Cross Entropy(CE) Loss. The hyperparameters to be tuned were: Number of epochs(e), Learning Rate(lr), weight decay(wd) and batch size(bs).
 
 
 ### Data

@@ -1,4 +1,4 @@
-# main file: runs the training-eval loop for Deeplabv3/Deeplabv3+ on Cityscapes dataset
+# main file: prepares the backbone(resnet18, resnet50 and resnet101) that can be used for image segmentation tasks
 # header files
 import os
 import numpy as np
@@ -15,7 +15,6 @@ import time
 from sklearn.metrics import confusion_matrix
 import argparse
 
-from metrics import StreamSegMetrics
 import network 
 import utils
 
@@ -36,8 +35,8 @@ parser.add_argument("--lr", type=float, default=0.001, help="lr")
 parser.add_argument("--model_type", type=str, default="resnet18", help="model")
 parser.add_argument("--bs_train", type=int, default=64, help="bs for train")
 parser.add_argument("--bs_val", type=int, default=64, help="bs for val")
-parser.add_argument("--wd", type=float, default=1e-4, help="wd")
-parser.add_argument("--epochs", type=int, default=100, help="epochs")
+parser.add_argument("--wd", type=float, default=5e-4, help="wd")
+parser.add_argument("--epochs", type=int, default=200, help="epochs")
 parser.add_argument("--resume", type=str, default=None, help="resume")
 opts = parser.parse_args()
 
